@@ -5,6 +5,7 @@ class KNN:
     """
     K-neariest-neighbor classifier using L1 loss
     """
+
     def __init__(self, k=1):
         self.k = k
 
@@ -54,8 +55,9 @@ class KNN:
         dists = np.zeros((num_test, num_train), np.float32)
         for i_test in range(num_test):
             for i_train in range(num_train):
-                # TODO: Fill dists[i_test][i_train]
-                pass
+                dists[i_test][i_train] = np.sum(np.abs(self.train_X[i_train] - X[i_test]))
+
+        return dists
 
     def compute_distances_one_loop(self, X):
         '''
@@ -73,9 +75,9 @@ class KNN:
         num_test = X.shape[0]
         dists = np.zeros((num_test, num_train), np.float32)
         for i_test in range(num_test):
-            # TODO: Fill the whole row of dists[i_test]
-            # without additional loops or list comprehensions
-            pass
+            dists[i_test] = np.abs(self.train_X - X[i_test]).sum(axis=-1)
+
+        return dists
 
     def compute_distances_no_loops(self, X):
         '''
@@ -89,12 +91,7 @@ class KNN:
         dists, np array (num_test_samples, num_train_samples) - array
            with distances between each test and each train sample
         '''
-        num_train = self.train_X.shape[0]
-        num_test = X.shape[0]
-        # Using float32 to to save memory - the default is float64
-        dists = np.zeros((num_test, num_train), np.float32)
-        # TODO: Implement computing all distances with no loops!
-        pass
+        return np.abs(X[:, None, :] - self.train_X[None, :, :]).sum(axis=-1)
 
     def predict_labels_binary(self, dists):
         '''
@@ -113,7 +110,10 @@ class KNN:
         for i in range(num_test):
             # TODO: Implement choosing best class based on k
             # nearest training samples
-            pass
+            min_k_dists = sorted(enumerate(dists[i]), key=lambda x: x[1])[:self.k]
+            top_k_hits = list(map(lambda x: self.train_y[x[0]], min_k_dists))
+            pred[i] = find_most_frequent(top_k_hits=top_k_hits)
+
         return pred
 
     def predict_labels_multiclass(self, dists):
@@ -129,10 +129,22 @@ class KNN:
            for every test sample
         '''
         num_test = dists.shape[0]
-        num_test = dists.shape[0]
         pred = np.zeros(num_test, np.int)
         for i in range(num_test):
             # TODO: Implement choosing best class based on k
             # nearest training samples
-            pass
+            min_k_dists = sorted(enumerate(dists[i]), key=lambda x: x[1])[:self.k]
+            top_k_hits = list(map(lambda x: self.train_y[x[0]], min_k_dists))
+            pred[i] = find_most_frequent(top_k_hits=top_k_hits)
         return pred
+
+
+def find_most_frequent(top_k_hits):
+    counts = {}
+    for v in top_k_hits:
+        if v not in counts:
+            counts[v] = 1
+        else:
+            counts[v] += 1
+
+    return next(iter({k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)}))
