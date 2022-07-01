@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import numpy as np
+
 from metrics import multiclass_accuracy
 
 
@@ -74,7 +75,7 @@ class Trainer:
 
         return multiclass_accuracy(pred, y)
 
-    def fit(self):
+    def fit(self, logging_enabled=True):
         """
         Trains a model
         """
@@ -86,7 +87,7 @@ class Trainer:
         loss_history = []
         train_acc_history = []
         val_acc_history = []
-        
+
         for epoch in range(self.num_epochs):
             shuffled_indices = np.arange(num_train)
             np.random.shuffle(shuffled_indices)
@@ -95,12 +96,14 @@ class Trainer:
 
             batch_losses = []
 
-            for batch_indices in batches_indices:
-                # TODO Generate batches based on batch_indices and
+            for batch_index in batches_indices:
+                # Generate batches based on batch_indices and
                 # use model to generate loss and gradients for all
                 # the params
+                x_batch = self.dataset.train_X[batch_index]
+                y_batch = self.dataset.train_y[batch_index]
 
-                raise Exception("Not implemented!")
+                loss = self.model.compute_loss_and_gradients(x_batch, y_batch)
 
                 for param_name, param in self.model.params().items():
                     optimizer = self.optimizers[param_name]
@@ -109,8 +112,7 @@ class Trainer:
                 batch_losses.append(loss)
 
             if np.not_equal(self.learning_rate_decay, 1.0):
-                # TODO: Implement learning rate decay
-                raise Exception("Not implemented!")
+                self.learning_rate *= self.learning_rate_decay
 
             ave_loss = np.mean(batch_losses)
 
@@ -120,11 +122,16 @@ class Trainer:
             val_accuracy = self.compute_accuracy(self.dataset.val_X,
                                                  self.dataset.val_y)
 
-            print("Loss: %f, Train accuracy: %f, val accuracy: %f" %
-                  (batch_losses[-1], train_accuracy, val_accuracy))
+            if logging_enabled and epoch % 10 == 9:
+                print(f"Epoch: {epoch + 1}")
+                print(f"Loss: {batch_losses[-1]}, Train accuracy: {train_accuracy}, val accuracy: {val_accuracy}")
 
             loss_history.append(ave_loss)
             train_acc_history.append(train_accuracy)
             val_acc_history.append(val_accuracy)
+
+            if epoch > 2 and abs(val_accuracy - val_acc_history[-2]) < 1e-5:
+                print(f"Reached accuracy limit at epoch {epoch + 1}")
+                break
 
         return loss_history, train_acc_history, val_acc_history
