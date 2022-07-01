@@ -15,6 +15,10 @@ def check_gradient(f, x, delta=1e-5, tol=1e-4):
     Return:
       bool indicating whether gradients match or not
     """
+
+    def f_val(val):
+        return f(val)[0]
+
     assert isinstance(x, np.ndarray)
     assert x.dtype == np.float
 
@@ -23,18 +27,21 @@ def check_gradient(f, x, delta=1e-5, tol=1e-4):
 
     assert analytic_grad.shape == x.shape
 
+    # We will go through every dimension of x and compute numeric
+    # derivative for it
     it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
     while not it.finished:
         ix = it.multi_index
         analytic_grad_at_ix = analytic_grad[ix]
-        numeric_grad_at_ix = 0
-
-        # TODO Copy from previous assignment
-        raise Exception("Not implemented!")
+        x_right = x.copy()
+        x_right[ix] += delta
+        x_left = x.copy()
+        x_left[ix] -= delta
+        numeric_grad_at_ix = (f_val(x_right) - f_val(x_left)) / (2 * delta)
 
         if not np.isclose(numeric_grad_at_ix, analytic_grad_at_ix, tol):
             print("Gradients are different at %s. Analytic: %2.5f, Numeric: %2.5f" % (
-                  ix, analytic_grad_at_ix, numeric_grad_at_ix))
+                ix, analytic_grad_at_ix, numeric_grad_at_ix))
             return False
 
         it.iternext()
@@ -118,6 +125,8 @@ def check_model_gradient(model, X, y,
     Returns:
       bool indicating whether gradients match or not
     """
+    check_result = True
+
     params = model.params()
 
     for param_key in params:
@@ -132,6 +141,6 @@ def check_model_gradient(model, X, y,
             return loss, grad
 
         if not check_gradient(helper_func, initial_w, delta, tol):
-            return False
+            check_result = False
 
-    return True
+    return check_result

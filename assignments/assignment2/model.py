@@ -17,8 +17,11 @@ class TwoLayerNet:
         reg, float - L2 regularization strength
         """
         self.reg = reg
-        # TODO Create necessary layers
-        raise Exception("Not implemented!")
+        self.network = [
+            FullyConnectedLayer(n_input, hidden_layer_size, "FL1"),
+            ReLULayer("RL1"),
+            FullyConnectedLayer(hidden_layer_size, n_output, "FL2")
+        ]
 
     def compute_loss_and_gradients(self, X, y):
         """
@@ -29,18 +32,29 @@ class TwoLayerNet:
         X, np array (batch_size, input_features) - input data
         y, np array of int (batch_size) - classes
         """
+
         # Before running forward and backward pass through the model,
         # clear parameter gradients aggregated from the previous pass
-        # TODO Set parameter gradient to zeros
-        # Hint: using self.params() might be useful!
-        raise Exception("Not implemented!")
-        
-        # TODO Compute loss and fill param gradients
+        for param_name, params in self.params().items():
+            params.reset_gradients()
+            assert np.all(np.isclose(params.grad, 0.))
+
+        # Compute loss and fill param gradients
         # by running forward and backward passes through the model
-        
+        input_x = X
+        for layer in self.network:
+            input_x = layer.forward(input_x)
+
+        loss, gradient = softmax_with_cross_entropy(input_x, y)
+
+        for layer in reversed(self.network):
+            gradient = layer.backward(gradient)
+
         # After that, implement l2 regularization on all params
-        # Hint: self.params() is useful again!
-        raise Exception("Not implemented!")
+        for param_name, params in self.params().items():
+            l2_loss, l2_gradient = l2_regularization(params.value, self.reg)
+            loss += l2_loss
+            params.grad += l2_gradient
 
         return loss
 
@@ -54,19 +68,21 @@ class TwoLayerNet:
         Returns:
           y_pred, np.array of int (test_samples)
         """
-        # TODO: Implement predict
-        # Hint: some of the code of the compute_loss_and_gradients
-        # can be reused
-        pred = np.zeros(X.shape[0], np.int)
+        input_x = X
+        for layer in self.network:
+            input_x = layer.forward(input_x)
 
-        raise Exception("Not implemented!")
-        return pred
+        return np.argmax(input_x, axis=1)
 
     def params(self):
         result = {}
 
-        # TODO Implement aggregating all of the params
+        for layer in self.network:
+            params = layer.params()
+            if not params:
+                continue
 
-        raise Exception("Not implemented!")
+            result[f"{layer.name}_W"] = params['W']
+            result[f"{layer.name}_B"] = params['B']
 
         return result
